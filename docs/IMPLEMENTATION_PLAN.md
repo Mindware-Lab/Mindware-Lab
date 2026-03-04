@@ -6,7 +6,7 @@ This plan assumes Obsidian free tier for graph exploration and VSCode + GitHub a
 
 1. Create `.env` contract for API keys and DB connection strings.
 2. Stand up Postgres + pgvector locally.
-3. Define initial schema for papers, concepts, links, zotero items, and app events.
+3. Define initial schema for papers, concepts, links, Zotero items, OSF entities, and app events.
 4. Add GitHub Actions skeleton for lint, unit tests, and scheduled ingestion jobs.
 
 Exit criteria:
@@ -14,18 +14,22 @@ Exit criteria:
 - DB migrations apply cleanly
 - CI workflow triggers on pull requests
 
-## Phase 1 (Week 1): Knowledge bank + Zotero + Obsidian
+## Phase 1 (Week 1): Knowledge bank + Zotero + OSF + Obsidian
 
 1. Build Zotero sync job:
 - pull collections, items, tags, and attachment metadata
 - map into normalized `zotero_item` table
-2. Define markdown note template for papers and concepts.
-3. Generate/update markdown files from Zotero items.
-4. Configure Obsidian vault path to `components/knowledge-bank/obsidian-vault`.
-5. Add concept-linking script that injects wiki links with confidence thresholds.
+2. Build OSF sync job:
+- pull projects/components, files, and preprints
+- map into normalized `osf_node`, `osf_file`, and `osf_preprint` tables
+3. Define markdown note templates for papers, concepts, and datasets.
+4. Generate/update markdown files from Zotero and OSF sources.
+5. Configure Obsidian vault path to `components/knowledge-bank/obsidian-vault`.
+6. Add concept-linking script that injects wiki links with confidence thresholds.
 
 Exit criteria:
 - new Zotero item appears in DB and markdown
+- new OSF project/file appears in DB and markdown
 - Obsidian graph displays linked notes
 - link injection runs idempotently
 
@@ -34,7 +38,7 @@ Exit criteria:
 1. Implement text chunking for markdown and PDF text.
 2. Create embeddings pipeline and vector index updates.
 3. Build query API/CLI that returns answer + cited sources.
-4. Add citation-first retrieval mode: prioritize your Zotero library before open web sources.
+4. Add citation-first retrieval mode: prioritize your Zotero and OSF-linked corpus before open web sources.
 
 Exit criteria:
 - `ask "question"` returns cited answer with source ids
@@ -56,7 +60,7 @@ Exit criteria:
 1. Build experiment config schema (tasks, randomization, consent, completion rules).
 2. Build minimal web runtime to deliver tasks and capture responses.
 3. Add participant/session lifecycle and export pipeline.
-4. Link each experiment version to Zotero references.
+4. Link each experiment version to Zotero and OSF references.
 
 Exit criteria:
 - deploy one experiment in cloud
@@ -76,14 +80,15 @@ Exit criteria:
 ## Suggested order for your first 10-hour prototype
 
 1. Zotero sync minimal metadata
-2. Paper markdown generation
-3. Basic concept linking
-4. Embeddings + simple Q/A with citations
-5. One app event import + one stats notebook
+2. OSF sync minimal node/file metadata
+3. Paper/dataset markdown generation
+4. Basic concept linking
+5. Embeddings + simple Q/A with citations
 
 ## Risks to manage early
 
 - data privacy and consent boundaries for participant data
 - false confidence from low-quality auto-links
-- citation drift when PDFs change or metadata is incomplete
+- citation drift when source metadata is incomplete
+- private or embargoed OSF content handling mistakes
 - uncontrolled agent writes without review checkpoints

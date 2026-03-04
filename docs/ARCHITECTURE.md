@@ -22,6 +22,9 @@ Core entities:
 - `concept_link`
 - `note`
 - `zotero_item`
+- `osf_node`
+- `osf_file`
+- `osf_preprint`
 - `app_event`
 - `session`
 - `participant`
@@ -31,9 +34,10 @@ Core entities:
 
 ## Integration boundaries
 
-- Obsidian free tier reads and edits markdown in `knowledge-bank/obsidian-vault`.
+- Obsidian free tier reads and edits markdown in `components/knowledge-bank/obsidian-vault`.
 - Zotero sync writes normalized citation metadata to `zotero_item` and a markdown citation index.
-- RAG retrieval uses chunks derived from notes and PDFs, joined to citation ids.
+- OSF sync writes normalized project/file/preprint metadata to `osf_node`, `osf_file`, and `osf_preprint`.
+- RAG retrieval uses chunks derived from notes and PDFs, joined to citation ids and OSF provenance references.
 - Agent outputs are proposals until they pass review rules.
 
 ## Guardrails
@@ -41,3 +45,4 @@ Core entities:
 - No silent overwrites of manually edited notes.
 - Evidence and speculative notes use different templates.
 - Participant data workflows require explicit privacy checks and retention policy.
+- OSF publish or preprint update flows are always human-approved actions.

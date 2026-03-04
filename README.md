@@ -1,22 +1,57 @@
 # Mindware Lab
 
-A research platform scaffold for:
-- knowledge bank and concept graph
-- ingestion and analysis of cognitive app data
-- cloud experiment and survey delivery
-- computational brain-network modeling
+Mindware Lab is a modular research platform for computational neuroscience workflows.
+
+It is designed to combine:
+- a knowledge bank (papers, notes, concept graph)
+- app telemetry ingestion and statistical analysis
+- cloud-based experiment and survey delivery
+- computational modeling runs
 - agent-based research scouting and synthesis
 
-This structure is designed to work with:
-- VSCode + Codex for build and automation
-- GitHub for versioning and workflows
-- Obsidian free tier for graph exploration and note navigation
-- Zotero as the citation backbone with RAG-ready retrieval
+The repository is structured for VSCode + Codex development, GitHub automation, Obsidian free-tier graph exploration, and citation/data integration through Zotero and OSF.
 
-## Directory map
+## Core capabilities
+
+1. Knowledge bank with linked notes
+- markdown-first vault for paper, concept, and dataset notes
+- wiki-link graph that Obsidian can visualize
+- provenance-aware note templates for evidence tracking
+
+2. Reference and repository integrations
+- Zotero sync for citations, metadata, and library organization
+- OSF sync for projects, files, datasets, and preprints
+- normalized metadata layer so references can be queried consistently
+
+3. RAG-backed research querying
+- semantic retrieval over notes and source documents
+- citation-grounded answers with source identifiers
+- priority retrieval from your curated corpus before open web sources
+
+4. Cognitive app data pipeline
+- event schema and ingestion for cognitive training/assessment apps
+- validation and quality checks before analysis
+- reproducible notebooks for descriptive and longitudinal analyses
+
+5. Cloud experiment platform
+- configurable online tasks and surveys
+- participant/session tracking and exportable datasets
+- traceable experiment versions linked to references
+
+6. Computational modeling environment
+- reproducible model runs with parameter manifests
+- artifact tracking for outputs and metrics
+- support for simulation and model fitting workflows
+
+7. Agentic research intelligence
+- automated paper scouting and summarization
+- proposal generation for concept links and hypotheses
+- review gate to prevent unverified auto-writes
+
+## Repository map
 
 ```text
-mindware-lab/
+Mindware-Lab/
   README.md
   docs/
     ARCHITECTURE.md
@@ -27,6 +62,8 @@ mindware-lab/
       obsidian-vault/
         README.md
       zotero-sync/
+        README.md
+      osf-sync/
         README.md
       rag/
         README.md
@@ -57,14 +94,16 @@ mindware-lab/
       README.md
 ```
 
-## Design rules
+## Operating principles
 
-1. Keep claims and hypotheses separate from evidence-backed notes.
-2. Every generated summary must carry provenance (`source`, `date`, `model`, `confidence`).
-3. Store public app analytics in structured tables before any modeling.
-4. Keep Obsidian as a UI layer over markdown, not the system of record.
-5. Prefer human review before auto-merging agent-proposed knowledge links.
+1. No citation, no claim.
+2. Separate speculative hypotheses from evidence-backed conclusions.
+3. Keep Obsidian as an exploration UI; keep canonical metadata in DB + git-tracked files.
+4. Require human approval for publish actions and high-impact graph updates.
+5. Maintain audit logs for sync jobs, retrieval runs, and agent actions.
 
-## Next action
+## Where to start
 
-Start with [docs/IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md).
+1. Review architecture: `docs/ARCHITECTURE.md`
+2. Execute phased build plan: `docs/IMPLEMENTATION_PLAN.md`
+3. Configure integration secrets: `configs/env/README.md`
