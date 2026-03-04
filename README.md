@@ -105,5 +105,6 @@ Mindware-Lab/
 ## Where to start
 
 1. Review architecture: `docs/ARCHITECTURE.md`
-2. Execute phased build plan: `docs/IMPLEMENTATION_PLAN.md`
-3. Configure integration secrets: `configs/env/README.md`
+2. Start with actionable first steps: `docs/FIRST_STEPS_IMPLEMENTATION_PLAN.md`
+3. Use the full roadmap: `docs/IMPLEMENTATION_PLAN.md`
+4. Configure integration secrets: `configs/env/README.md`
