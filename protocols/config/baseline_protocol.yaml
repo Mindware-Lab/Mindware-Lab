@@ -1,0 +1,321 @@
+version: "0.1"
+protocol_id: "tg_far_transfer_baseline_v1"
+title: "Trident-G far-transfer baseline protocol"
+purpose: >
+  Baseline executable far-transfer protocol for testing portable control invariants
+  and portable Y-operator chains across held-out wrappers and distant domains.
+
+design_principles:
+  - "Psi-gate first: do not escalate when out of band."
+  - "Progress by one dial at a time when stable."
+  - "Use plateau + low drift to trigger Spike-Tune."
+  - "If plateau + high drift, widen corridor rather than increase difficulty."
+  - "If a chain works once, run a wrapper swap immediately."
+  - "Use Y10 discrimination when confusion persists."
+  - "Bank only after portability evidence and delayed recheck."
+  - "Treat spontaneous spikes as labile until stabilised and retested."
+
+state_model:
+  psi_states:
+    - IN_BAND
+    - OVERHEAT
+    - FLAT
+
+  transition_logic:
+    in_band_definition:
+      description: >
+        Productive corridor in which updates are considered diagnostically clean enough
+        for escalation, swaps, and operator selection.
+      thresholds:
+        mismatch_max: 0.25
+        drift_max: 0.20
+        recovery_latency_max: 3
+        error_burst_rate_max: 0.15
+
+    overheat_definition:
+      thresholds:
+        mismatch_min: 0.40
+        drift_min: 0.30
+        recovery_latency_min: 5
+
+    flat_definition:
+      thresholds:
+        engagement_min: 0.30
+        action_density_min: 0.30
+
+telemetry:
+  required_signals:
+    - psi_state
+    - mismatch
+    - drift
+    - recovery_latency
+    - recovery_slope
+    - error_burst_rate
+    - lure_error_rate
+    - switch_cost
+    - operator_fidelity
+    - mission_success_signal
+    - swap_cost_near
+    - swap_cost_mid
+    - swap_cost_far
+    - tuple2_tracking_score
+    - tuple3_probe_score
+    - delayed_recheck_score
+
+  derived_signals:
+    - clean_dynamics_index
+    - portability_index
+    - spike_candidate_flag
+    - spike_validated_flag
+    - thin_automation_flag
+
+gloop_core:
+  mandatory_operators:
+    - Y0
+    - Y1
+    - Y10
+    - Y9
+    - Y11
+
+  strongly_recommended:
+    - Y7
+    - Y13
+    - Y14
+    - Y15
+    - EOU
+
+  optional_operators:
+    - Y2
+    - Y3
+    - Y4
+    - Y5
+    - Y6
+    - Y8
+    - Y12
+
+stage_policy:
+  SALience_Investment_Psi:
+    required_ops: [Y0]
+    gate_to_next:
+      - "psi_state == IN_BAND OR explicit safe low-stakes explore mode"
+      - "rigour_budget is set"
+      - "permissions_mode is set"
+
+  MAP_Model:
+    required_ops: [Y1]
+    optional_ops: [Y2, Y3, Y5, Y7]
+    gate_to_next:
+      - "working_model exists"
+      - "at least 2 candidate hypotheses or 1 candidate + explicit baseline"
+
+  PROBE_Test:
+    required_ops: [Y10]
+    optional_ops: [Y7]
+    gate_to_next:
+      - "diagnostic probe logged"
+      - "hypothesis discrimination updated"
+
+  COMMIT_Plan:
+    required_ops: [Y9]
+    optional_ops: [Y7]
+    gate_to_next:
+      - "policy_json exists"
+      - "stop rule recorded"
+
+  EOU_Execute:
+    required_ops: [EOU]
+    optional_ops: [Y7, Y10, Y14, Y15]
+    gate_to_next:
+      - "outcome observed"
+      - "mismatch updated"
+      - "next routing decision recorded"
+
+  SWAP_Bank:
+    required_ops: [Y11]
+    optional_ops: [Y7, Y5]
+    gate_to_next:
+      - "portability experiments logged"
+      - "delayed recheck scheduled or completed"
+
+type1_capacity_rules:
+  escalation:
+    stable_progress_rule:
+      when:
+        - "psi_state == IN_BAND"
+        - "mismatch <= 0.20"
+        - "performance_stable == true"
+      then:
+        - "increase one constraint only"
+      allowed_constraints:
+        - pace
+        - interference
+        - n_level
+        - relational_variety
+
+    plateau_low_drift_rule:
+      when:
+        - "plateau_detected == true"
+        - "drift <= 0.15"
+      then:
+        - "keep n_level stable"
+        - "add small constraint bump"
+        - "run wrapper swap"
+
+    plateau_high_drift_rule:
+      when:
+        - "plateau_detected == true"
+        - "drift >= 0.25"
+      then:
+        - "reduce constraint"
+        - "shorten blocks"
+        - "prioritise re_entry"
+        - "run clean repetitions before new escalation"
+
+    messy_session_stop_rule:
+      when:
+        - "mismatch >= 0.40 OR error_burst_rate >= 0.30"
+      then:
+        - "stop escalation"
+        - "switch to stabilisation block or lighter wrapper"
+
+  relational_bridge_rule:
+    when:
+      - "tuple2_tracking_score >= 0.80"
+      - "tuple3_probe_score < 0.65"
+    then:
+      - "keep n_level stable"
+      - "increase relational variety"
+      - "increase probe frequency"
+      - "require probe stability across wrappers before promotion"
+
+  type1_transfer_rule:
+    success_definition:
+      - "gains hold across >= 2 wrappers"
+      - "gains hold across >= 2 demand classes"
+      - "no mismatch spike during swap test"
+    failure_definition:
+      - "collapse under swaps => thin_automation_flag = true"
+
+type2_mindware_rules:
+  y0_rigour_rule:
+    when:
+      - "psi_state != IN_BAND"
+    then:
+      - "no solve harder behaviour"
+      - "stabilise first"
+      - "set rigour to stakes only after stabilisation"
+
+  eou_rule:
+    after_y9:
+      - "execute"
+      - "observe outcomes against mission_success_signal"
+      - "update via Y7 and/or Y10"
+
+  immediate_swap_rule:
+    when:
+      - "operator_chain_success_once == true"
+    then:
+      - "run one wrapper swap immediately"
+
+  failure_routing:
+    order:
+      - state
+      - capacity_stability
+      - operator_remediation
+      - mission_signal_tightening
+      - portability_probes
+
+  entropy_then_mi_capture:
+    entropy_phase:
+      - wrapper_swap
+      - stake_swap
+      - representation_swap
+    mi_phase:
+      - extract predictive invariant
+      - compress with Y2 and/or Y5
+      - specify trigger
+      - specify boundary
+      - specify unpack_rule
+      - retest
+
+  confusion_rule:
+    when:
+      - "confusion_persists == true"
+    then:
+      - "run Y10 diagnostic probe"
+      - "forbid extra rumination without probe"
+
+spike_protocol:
+  enabled: true
+
+  trigger_logic:
+    candidate_spike_when:
+      - "post_perturbation mismatch decreases"
+      - "recovery_slope improves"
+      - "swap_cost decreases at equal or higher challenge"
+      - "held_out_wrapper_score jumps without instability spike"
+
+  fragile_phase:
+    sessions_min: 1
+    sessions_max: 3
+    rules:
+      - "consolidate in-band"
+      - "moderate difficulty only"
+      - "reduced noise"
+      - "no same-day banking"
+
+  two_step_banking:
+    step_1:
+      - "stabilise in same wrapper"
+    step_2:
+      - "prove portability with minimal one-variable swaps"
+
+  cue_binding_tests:
+    variables:
+      - representation
+      - stimulus_set
+      - phrasing
+      - context
+
+banking:
+  type1_control_invariant:
+    requires:
+      - "stable across swaps for multiple sessions"
+      - "trigger note stored"
+      - "break condition stored"
+      - "re_entry_cue stored"
+
+  type2_script_banking:
+    requires:
+      - "Y11 pass on wrapper swap"
+      - "Y11 pass on stake swap"
+      - "repeated mission outcome improvement"
+      - "delayed recheck pass"
+      - "trigger stored"
+      - "boundary conditions stored"
+      - "unpack trigger stored"
+
+  vetoes:
+    - "no banking while psi_state != IN_BAND"
+    - "no banking on same-day euphoria"
+    - "no banking if immediate wrapper swap collapses"
+
+evaluation_defaults:
+  train_families:
+    - capacity
+    - operators
+
+  heldout_transfer_required: true
+  distant_domain_transfer_required: true
+
+  distant_domains:
+    - trading_toy
+    - backend_ops_toy
+
+logging:
+  save_y_ops_trace: true
+  save_failure_routing: true
+  save_spike_events: true
+  save_portability_evidence: true
+  save_boundary_conditions: true
+  save_reproducibility_log: true
