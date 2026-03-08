@@ -1,0 +1,264 @@
+version: "0.1"
+search_space_id: "tg_far_transfer_search_v1"
+title: "Swarm-searchable protocol variants"
+
+search_policy:
+  mutate_protocol_only: true
+  evaluator_read_only: true
+  benchmark_read_only: true
+  banking_rules_read_only: true
+
+mutation_targets:
+  protocol_level:
+    corridor_width:
+      type: float
+      min: 0.80
+      max: 1.40
+      step: 0.05
+      baseline: 1.00
+
+    plateau_window_sessions:
+      type: int
+      min: 2
+      max: 6
+      step: 1
+      baseline: 3
+
+    low_drift_threshold:
+      type: float
+      min: 0.08
+      max: 0.20
+      step: 0.01
+      baseline: 0.15
+
+    high_drift_threshold:
+      type: float
+      min: 0.22
+      max: 0.35
+      step: 0.01
+      baseline: 0.25
+
+    mismatch_escalation_max:
+      type: float
+      min: 0.15
+      max: 0.30
+      step: 0.01
+      baseline: 0.20
+
+    fragile_phase_sessions:
+      type: int
+      min: 1
+      max: 4
+      step: 1
+      baseline: 2
+
+    delayed_recheck_gap_sessions:
+      type: int
+      min: 1
+      max: 5
+      step: 1
+      baseline: 2
+
+    perturbation_size:
+      type: categorical
+      values: [very_small, small, moderate]
+      baseline: small
+
+    swap_ladder_policy:
+      type: categorical
+      values:
+        - near_only_early
+        - near_to_mid_progression
+        - near_mid_far_early
+      baseline: near_to_mid_progression
+
+  curriculum_level:
+    block_structure:
+      type: categorical
+      values:
+        - blocked_by_operator
+        - interleaved_within_family
+        - mixed_domain_interleaved
+      baseline: interleaved_within_family
+
+    source_to_transfer_timing:
+      type: categorical
+      values:
+        - source_first_then_transfer
+        - early_heldout_exposure
+        - mixed_from_start
+      baseline: source_first_then_transfer
+
+    first_swap_timing:
+      type: categorical
+      values:
+        - immediate_after_first_success
+        - after_two_successes
+        - after_same_wrapper_stabilisation
+      baseline: immediate_after_first_success
+
+    representation_swap_frequency:
+      type: categorical
+      values:
+        - low
+        - medium
+        - high
+      baseline: medium
+
+    stake_swap_frequency:
+      type: categorical
+      values:
+        - low
+        - medium
+        - high
+      baseline: medium
+
+    pulse_frequency:
+      type: categorical
+      values:
+        - low
+        - medium
+        - high
+      baseline: medium
+
+  operator_level:
+    require_y7_before_y10:
+      type: boolean
+      baseline: false
+
+    require_y7_before_y9:
+      type: boolean
+      baseline: true
+
+    allow_y5_early_abstraction:
+      type: boolean
+      baseline: true
+
+    allow_y4_analogy:
+      type: boolean
+      baseline: false
+
+    use_y13_loop_prevent:
+      type: boolean
+      baseline: true
+
+    use_y14_recover:
+      type: boolean
+      baseline: true
+
+    use_y15_externalise:
+      type: boolean
+      baseline: true
+
+    probe_budget_in_band:
+      type: int
+      min: 1
+      max: 4
+      step: 1
+      baseline: 2
+
+    max_hypotheses_in_band:
+      type: int
+      min: 2
+      max: 6
+      step: 1
+      baseline: 3
+
+    max_hypotheses_overheat:
+      type: int
+      min: 1
+      max: 3
+      step: 1
+      baseline: 2
+
+  domain_routing:
+    include_trading_as_train_family:
+      type: boolean
+      baseline: false
+
+    include_backend_ops_as_train_family:
+      type: boolean
+      baseline: false
+
+    use_distant_domains_only_for_test:
+      type: boolean
+      baseline: true
+
+fixed_constraints:
+  hard_rules:
+    - "No escalation when psi_state != IN_BAND"
+    - "Only one dial change per escalation step"
+    - "No banking without delayed recheck"
+    - "No banking if immediate swap fails"
+    - "Evaluator metrics and weights cannot be changed"
+    - "Held-out wrappers cannot be promoted into training set during a run"
+
+search_strategies:
+  starter_variants:
+    - variant_id: "strict_baseline"
+      description: "Closest to the frozen protocol."
+
+    - variant_id: "abstraction_heavy"
+      overrides:
+        allow_y5_early_abstraction: true
+        require_y7_before_y9: true
+        representation_swap_frequency: medium
+        first_swap_timing: immediate_after_first_success
+
+    - variant_id: "probe_first"
+      overrides:
+        require_y7_before_y10: false
+        probe_budget_in_band: 3
+        max_hypotheses_in_band: 4
+
+    - variant_id: "psi_protected"
+      overrides:
+        corridor_width: 1.15
+        mismatch_escalation_max: 0.18
+        pulse_frequency: low
+        max_hypotheses_overheat: 1
+
+    - variant_id: "aggressive_spike_tune"
+      overrides:
+        perturbation_size: moderate
+        representation_swap_frequency: high
+        stake_swap_frequency: high
+        first_swap_timing: immediate_after_first_success
+
+mutation_operators:
+  - name: "single_knob_step"
+    description: "Change one numeric or categorical knob at a time."
+  - name: "paired_policy_shift"
+    description: "Change two related knobs together, e.g. pulse_frequency + fragile_phase_sessions."
+  - name: "operator_chain_edit"
+    description: "Add or remove one optional operator while preserving hard gates."
+  - name: "curriculum_swap"
+    description: "Replace one curriculum scheduling policy with another."
+  - name: "domain_routing_toggle"
+    description: "Toggle whether distant domains appear only in final tests."
+
+selection_rules:
+  promote_variant_when:
+    - "primary_score > baseline_primary_score"
+    - "no veto triggered"
+    - "heldout_transfer_score >= baseline_heldout_transfer_score"
+    - "delayed_recheck_score >= baseline_delayed_recheck_score"
+
+  archive_variant_when:
+    - "source_score improves but heldout_transfer collapses"
+    - "thin_automation_flag == true"
+    - "state_drift_penalty increases sharply"
+
+audit_requirements:
+  per_variant_log_fields:
+    - variant_id
+    - parent_variant_id
+    - changed_knobs
+    - rationale
+    - source_score
+    - heldout_transfer_score
+    - distant_domain_score
+    - delayed_recheck_score
+    - state_drift_penalty
+    - complexity_penalty
+    - vetoes_triggered
