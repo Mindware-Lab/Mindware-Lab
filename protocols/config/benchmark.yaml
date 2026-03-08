@@ -1,0 +1,257 @@
+version: "0.1"
+benchmark_id: "tg_far_transfer_benchmark_v1"
+title: "Trident-G far-transfer benchmark"
+purpose: >
+  Fixed evaluator for comparing G-Loop and Spike-Tune protocol variants on source,
+  held-out, and distant-domain transfer.
+
+reproducibility:
+  random_seed: 42
+  fixed_train_val_test_split: true
+  save_figures: true
+  save_tables: true
+  save_variant_logs: true
+  outputs:
+    figures_dir: "results/figures"
+    tables_dir: "results/tables"
+    run_logs_dir: "results/runs"
+    reproducibility_log: "reports/reproducibility_log.md"
+
+benchmark_structure:
+  families:
+    - family_id: "capacity"
+      description: >
+        Portable control invariants under load, interference, and relational challenge.
+      source_wrappers:
+        - setpoint_regulation
+        - relational_tracking
+        - interference_pulse
+      heldout_wrappers:
+        - setpoint_regulation_alt_surface
+        - relational_tracking_alt_surface
+        - interference_pulse_alt_surface
+      distant_domain_tests:
+        - trading_state_control_toy
+        - backend_load_control_toy
+
+    - family_id: "operators"
+      description: >
+        Portable Y-operator chains across diagnosis, planning, and explanation wrappers.
+      source_wrappers:
+        - diagnosis_chain
+        - planning_chain
+        - explanation_chain
+      heldout_wrappers:
+        - diagnosis_chain_alt_domain
+        - planning_chain_alt_domain
+        - explanation_chain_alt_domain
+      distant_domain_tests:
+        - trading_regime_diagnosis_toy
+        - backend_incident_diagnosis_toy
+
+    - family_id: "spike_dynamics"
+      description: >
+        Regime-shift detection and stabilisation under perturbation, swap, and delayed recheck.
+      source_wrappers:
+        - plateau_then_pulse
+        - first_success_then_swap
+        - cue_binding_shift
+      heldout_wrappers:
+        - plateau_then_pulse_alt_form
+        - first_success_then_swap_alt_form
+        - cue_binding_shift_alt_form
+      distant_domain_tests:
+        - trading_pressure_shift_toy
+        - backend_priority_shift_toy
+
+demand_classes:
+  - control_regulation
+  - relational_inference
+  - diagnostic_probe
+  - plan_commit_execute
+  - portability_banking
+
+minimum_transfer_criteria:
+  type1:
+    - "success across >= 2 wrappers"
+    - "success across >= 2 demand classes"
+    - "no major mismatch spike during swaps"
+
+  type2:
+    - "Y11 wrapper swap pass"
+    - "Y11 stake swap pass"
+    - "repeated mission outcome improvement"
+    - "delayed recheck pass"
+
+task_parameters:
+  session_length_blocks: 8
+  block_length_trials: 20
+  near_swap_probability: 0.50
+  mid_swap_probability: 0.30
+  far_swap_probability: 0.20
+
+  perturbations:
+    speed_pulse:
+      enabled: true
+      duration_trials: 5
+    interference_pulse:
+      enabled: true
+      duration_trials: 5
+    representation_swap:
+      enabled: true
+    stake_swap:
+      enabled: true
+
+evaluation_tests:
+  - test_id: "source_performance"
+    description: "Performance inside source wrapper families."
+    required: true
+
+  - test_id: "heldout_wrapper_transfer"
+    description: "Transfer to unseen wrappers with preserved deep demand."
+    required: true
+
+  - test_id: "cross_demand_transfer"
+    description: "Success across at least two demand classes."
+    required: true
+
+  - test_id: "immediate_swap_test"
+    description: "Immediate post-success wrapper swap to expose thin automation."
+    required: true
+
+  - test_id: "delayed_recheck"
+    description: "Retention and portability after a delay."
+    required: true
+
+  - test_id: "distant_domain_transfer"
+    description: "Transfer to toy trading and backend-ops domains."
+    required: true
+
+metrics:
+  primary_score:
+    name: "portability_weighted_score"
+    formula: >
+      0.20 * source_score
+      + 0.30 * heldout_transfer_score
+      + 0.15 * cross_demand_transfer_score
+      + 0.15 * immediate_swap_resilience_score
+      + 0.10 * delayed_recheck_score
+      + 0.10 * distant_domain_score
+      - 0.10 * state_drift_penalty
+      - 0.05 * complexity_penalty
+      - 0.05 * thin_automation_penalty
+
+  component_metrics:
+    - source_score
+    - heldout_transfer_score
+    - cross_demand_transfer_score
+    - immediate_swap_resilience_score
+    - delayed_recheck_score
+    - distant_domain_score
+    - state_drift_penalty
+    - complexity_penalty
+    - thin_automation_penalty
+    - swap_cost_index
+    - recovery_index
+    - operator_fidelity_index
+    - validated_spike_index
+
+metric_definitions:
+  source_score:
+    description: "Mean standardised task success in source wrappers."
+
+  heldout_transfer_score:
+    description: "Mean standardised task success in held-out wrappers."
+
+  cross_demand_transfer_score:
+    description: "Breadth of success across demand classes."
+
+  immediate_swap_resilience_score:
+    description: "Performance retention immediately after first-success wrapper swap."
+
+  delayed_recheck_score:
+    description: "Retention after scheduled delayed recheck."
+
+  distant_domain_score:
+    description: "Performance in toy trading and backend-ops transfer tests."
+
+  state_drift_penalty:
+    description: "Penalty for elevated mismatch, drift, recovery delay, or unstable oscillation."
+
+  complexity_penalty:
+    description: "Penalty for excessive operator count, hypothesis proliferation, or brittle complexity."
+
+  thin_automation_penalty:
+    description: "Penalty when source success collapses under swaps."
+
+  swap_cost_index:
+    description: "Cost of preserving performance under near/mid/far swaps."
+
+  recovery_index:
+    description: "Composite of recovery latency and recovery slope after perturbation."
+
+  operator_fidelity_index:
+    description: "How faithfully the intended Y-chain was executed."
+
+  validated_spike_index:
+    description: >
+      Credit only for spike candidates that survive fragile-phase stabilisation,
+      minimal one-variable swaps, and delayed recheck.
+
+veto_rules:
+  - veto_id: "banking_without_delay"
+    trigger: "banked_invariant == true AND delayed_recheck_pass == false"
+
+  - veto_id: "swap_collapse"
+    trigger: "immediate_swap_resilience_score < 0.40"
+
+  - veto_id: "out_of_band_learning"
+    trigger: "fraction_training_out_of_band > 0.35"
+
+  - veto_id: "overfitted_single_family"
+    trigger: >
+      source_score >= 0.75
+      AND heldout_transfer_score < 0.45
+      AND distant_domain_score < 0.40
+
+spike_validation:
+  candidate_conditions:
+    - "recovery_index improves after perturbation"
+    - "swap_cost_index improves at equal or higher challenge"
+    - "mismatch does not spike beyond veto threshold"
+
+  validation_conditions:
+    - "same-wrapper stabilisation pass"
+    - "minimal one-variable swap pass"
+    - "delayed recheck pass"
+
+  fragile_phase:
+    sessions: 2
+    max_noise_multiplier: 0.75
+    moderate_difficulty_only: true
+
+datasets_and_splits:
+  source_split_name: "train"
+  heldout_split_name: "validation"
+  distant_domain_split_name: "test"
+
+  lock_splits_across_runs: true
+  forbid_test_contamination: true
+
+reporting:
+  required_tables:
+    - "variant_scores.csv"
+    - "component_metrics.csv"
+    - "veto_log.csv"
+    - "spike_validation_log.csv"
+
+  required_figures:
+    - "score_comparison.png"
+    - "swap_cost_curves.png"
+    - "recovery_profiles.png"
+    - "heldout_transfer_heatmap.png"
+
+  required_text_outputs:
+    - "reports/reproducibility_log.md"
+    - "reports/boundary_conditions.md"
+    - "reports/winning_variants.md"
